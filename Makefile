@@ -31,15 +31,10 @@ COCKPIT_REPO_FILES = \
 	test/common \
 	$(NULL)
 
-COCKPIT_REPO_URL = https://github.com/cockpit-project/cockpit.git
-COCKPIT_REPO_COMMIT = 52222a2d3198fd05bbbbb75e35bc0970c2b4ae77 # 346 + 28 commits
-
 $(COCKPIT_REPO_FILES): $(COCKPIT_REPO_STAMP)
 COCKPIT_REPO_TREE = '$(strip $(COCKPIT_REPO_COMMIT))^{tree}'
 $(COCKPIT_REPO_STAMP): Makefile
-	@git rev-list --quiet --objects $(COCKPIT_REPO_TREE) -- 2>/dev/null || \
-	    git fetch --no-tags --no-write-fetch-head --depth=1 $(COCKPIT_REPO_URL) $(COCKPIT_REPO_COMMIT)
-	git archive $(COCKPIT_REPO_TREE) -- $(COCKPIT_REPO_FILES) | tar x
+	curl -L https://github.com/cockpit-project/cockpit/tarball/346 | tar xz --wildcards --strip-components=1 '*/pkg/lib' '*/test/common'
 
 #
 # i18n
