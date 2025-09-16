@@ -1,48 +1,101 @@
-/*
- * This file is part of Cockpit.
- *
- * Copyright (C) 2017 Red Hat, Inc.
- *
- * Cockpit is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation; either version 2.1 of the License, or
- * (at your option) any later version.
- *
- * Cockpit is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with Cockpit; If not, see <http://www.gnu.org/licenses/>.
- */
-
 import React, { useEffect, useState } from 'react';
 import { Alert } from "@patternfly/react-core/dist/esm/components/Alert/index.js";
 import { Card, CardBody, CardTitle } from "@patternfly/react-core/dist/esm/components/Card/index.js";
+import { Grid, GridItem, Page, PageSection, Title } from '@patternfly/react-core';
+import { proxy } from 'service';
 
 import cockpit from 'cockpit';
+import { ServicesTable } from './services';
+import { TAOWizard } from './wizard';
+import { TAOConfig } from './config';
+import { TAOInfos} from './info';
+
+import {Service} from './interface.Service';
 
 const _ = cockpit.gettext;
 
+const initServices: Service[] = [
+        {unit:"tao-ce.service", name: "TAO Community Edition", state: "unknown"},
+        {unit:"elasticsearch.service",  name: "ElasticSearch", state: "unknown"},
+        {unit:"redis.service",  name: "Redis", state: "unknown"},
+        {unit:"pgsql.service",  name: "PostgresSQL", state: "unknown"},
+        {unit:"pubsub-emulator.service",  name: "PubSub Emulator", state: "unknown"},
+        {unit:"firestore-emulator.service",  name: "Firestore Emulator", state: "unknown"},
+    ];
+
 export const Application = () => {
-    const [hostname, setHostname] = useState(_("Unknown"));
 
-    useEffect(() => {
-        const hostname = cockpit.file('/etc/hostname');
-        hostname.watch(content => setHostname(content?.trim() ?? ""));
-        return hostname.close;
-    }, []);
+    const [services, updateServices] = useState(initServices);
 
+    const handleServiceChange = (newService: Service) => {
+        updateServices(services.map((service) => {
+            if(service.unit === newService.unit) {
+                return newService
+            }
+            return service
+        }));
+    }
+
+    services.forEach((service: Service) => {
+        useEffect(() => {
+            const serviceProxy = proxy(service.unit,
+                'service'
+            );
+
+            serviceProxy.addEventListener('changed', () => {
+                service.state = serviceProxy.state ?? "unknown";
+                console.log("Status update " + service.state);
+                handleServiceChange(service);
+            });
+        },[]);
+    });
+
+    const [infos] = useState({domain: "unknown"});
+    
     return (
-        <Card>
-            <CardTitle>Starter Kit</CardTitle>
-            <CardBody>
-                <Alert
-                    variant="info"
-                    title={ cockpit.format(_("Running on $0"), hostname) }
-                />
-            </CardBody>
-        </Card>
+            <Page>
+                <PageSection>
+                    <Title headingLevel={'h1'}>TAO Community Edition</Title>
+                </PageSection>
+                <PageSection>
+                    <Grid hasGutter>
+                        <GridItem span={8}>
+                            <Card>
+                                <CardTitle>Wizard</CardTitle>
+                                <CardBody>
+                                    <TAOWizard services={services} />
+                                </CardBody>
+                            </Card>
+                        </GridItem>
+                        <GridItem span={4}>
+                            <Card>
+                                <CardTitle>Services</CardTitle>
+                                <CardBody>
+                                <ServicesTable services={services} />
+                                </CardBody>
+                            </Card>
+                        </GridItem>
+                    <GridItem span={8}>
+                    <Card>
+                        <CardTitle>Configuration</CardTitle>
+                        <CardBody>
+                            <TAOConfig/>
+                        </CardBody>
+                    </Card>
+
+                    </GridItem>
+                    <GridItem span={4}>
+                    <Card>
+                        <CardTitle>Info</CardTitle>
+                        <CardBody>
+                            <TAOInfos infos={infos}/>
+                        </CardBody>
+                    </Card>
+
+                    </GridItem>
+
+                    </Grid>
+                </PageSection>
+            </Page>
     );
 };

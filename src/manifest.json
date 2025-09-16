@@ -1,11 +1,11 @@
 {
-    "requires": {
-        "cockpit": "137"
+    "menu": {
+        "index": {
+            "order": 2,
+            "label": "TAO Community Edition",
+            "path": "index.html"
+        }
     },
 
-    "tools": {
-        "index": {
-            "label": "Starter Kit"
-        }
-    }
+    "content-security-policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval'"
 }
