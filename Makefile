@@ -17,7 +17,7 @@ NODE_MODULES_TEST=package-lock.json
 # one example file in dist/ from bundler to check if that already ran
 DIST_TEST=dist/manifest.json
 # one example file in pkg/lib to check if it was already checked out
-COCKPIT_REPO_STAMP=pkg/lib/cockpit-po-plugin.js
+COCKPIT_REPO_STAMP=pkg/lib/cockpit.js
 # common arguments for tar, mostly to make the generated tarballs reproducible
 TAR_ARGS = --sort=name --mtime "@$(shell git show --no-patch --format='%at')" --mode=go=rX,u+rw,a-s --numeric-owner --owner=0 --group=0
 

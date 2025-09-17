@@ -88,7 +88,7 @@ export const TAOWizard: React.FunctionComponent = ({services}:WizardProps) => {
     </WizardStep>
     <WizardStep name="Enjoy!" id="basic-ready-step" footer={{ nextButtonText: 'Finish' }}>
         You can now connect on TAO !
-    </WizardStep>
+    </WizardStep>  
   </Wizard>
 
 };

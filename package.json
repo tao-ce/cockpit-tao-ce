@@ -18,6 +18,7 @@
     "stylelint:fix": "stylelint --fix src/*{.css,scss}"
   },
   "devDependencies": {
+    "@types/node": "^24.5.0",
     "@types/react": "18.3.13",
     "@types/react-dom": "18.3.1",
     "@typescript-eslint/eslint-plugin": "8.43.0",
@@ -34,6 +35,7 @@
     "eslint-plugin-promise": "6.6.0",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "4.6.2",
+    "file-loader": "^6.2.0",
     "gettext-parser": "8.0.0",
     "glob": "11.0.3",
     "jed": "1.1.1",
@@ -47,12 +49,14 @@
   },
   "dependencies": {
     "@patternfly/patternfly": "6.1.0",
+    "@patternfly/react-component-groups": "^6.3.0",
     "@patternfly/react-core": "6.1.0",
     "@patternfly/react-icons": "6.1.0",
     "@patternfly/react-styles": "6.3.1",
     "@patternfly/react-table": "^6.3.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "react-icons": "^5.5.0"
+    "react-icons": "^5.5.0",
+    "yaml": "^2.8.1"
   }
 }

@@ -7,10 +7,13 @@ import { proxy } from 'service';
 import cockpit from 'cockpit';
 import { ServicesTable } from './services';
 import { TAOWizard } from './wizard';
-import { TAOConfig } from './config';
+import { TAOConfig as TAOConfigUI } from './config';
 import { TAOInfos} from './info';
 
 import {Service} from './interface.Service';
+import {TAOConfig} from './interface.TAOConfig';
+import { parse as yamlParse } from "yaml";
+import { PageHeader } from '@patternfly/react-component-groups';
 
 const _ = cockpit.gettext;
 
@@ -23,9 +26,15 @@ const initServices: Service[] = [
         {unit:"firestore-emulator.service",  name: "Firestore Emulator", state: "unknown"},
     ];
 
+const CONFIG_FILE = '/etc/tao-ce/config/tao.yaml';
+
 export const Application = () => {
 
     const [services, updateServices] = useState(initServices);
+
+    const [configFile, updateConfigFile] = useState('');
+
+    const taoConfig: TAOConfig = yamlParse(configFile) as TAOConfig;
 
     const handleServiceChange = (newService: Service) => {
         updateServices(services.map((service) => {
@@ -50,13 +59,15 @@ export const Application = () => {
         },[]);
     });
 
-    const [infos] = useState({domain: "unknown"});
+    useEffect(() => {
+        cockpit.file(CONFIG_FILE).read().then((content, tag) => {
+            updateConfigFile(content);
+        })
+    },[]);
     
     return (
-            <Page>
-                <PageSection>
-                    <Title headingLevel={'h1'}>TAO Community Edition</Title>
-                </PageSection>
+            <Page className='no-masthead-sidebar'>
+                <PageHeader title="TAO Community Edition Dashboard" subtitle="Pilot your environment" />
                 <PageSection>
                     <Grid hasGutter>
                         <GridItem span={8}>
@@ -79,7 +90,7 @@ export const Application = () => {
                     <Card>
                         <CardTitle>Configuration</CardTitle>
                         <CardBody>
-                            <TAOConfig/>
+                            <TAOConfigUI config={taoConfig} />
                         </CardBody>
                     </Card>
 
@@ -88,7 +99,7 @@ export const Application = () => {
                     <Card>
                         <CardTitle>Info</CardTitle>
                         <CardBody>
-                            <TAOInfos infos={infos}/>
+                            <TAOInfos config={taoConfig} />
                         </CardBody>
                     </Card>
 
