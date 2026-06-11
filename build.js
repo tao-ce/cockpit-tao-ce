@@ -1,36 +1,53 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import os from 'node:os';
 
 import { sassPlugin } from 'esbuild-sass-plugin';
 
-import { cleanPlugin } from './pkg/lib/esbuild-cleanup-plugin.js';
-import { cockpitCompressPlugin } from './pkg/lib/esbuild-compress-plugin.js';
 import { cockpitPoEsbuildPlugin } from './pkg/lib/cockpit-po-plugin.js';
 import { cockpitRsyncEsbuildPlugin } from './pkg/lib/cockpit-rsync-plugin.js';
+import { cleanPlugin } from './pkg/lib/esbuild-cleanup-plugin.js';
+import { cockpitCompressPlugin } from './pkg/lib/esbuild-compress-plugin.js';
+
+const useWasm = os.arch() !== 'x64';
+
+const esbuild = await (async () => {
+    try {
+        // Try node_modules first for installs with devDependencies
+        return (await import(useWasm ? 'esbuild-wasm' : 'esbuild')).default;
+    } catch (e) {
+        if (e.code !== 'ERR_MODULE_NOT_FOUND')
+            throw e;
+
+        // Fall back to distro package (e.g. Debian's /usr/lib/*/nodejs/esbuild)
+        // Use createRequire to leverage Node's module resolution which searches system paths
+        // Use require.resolve to find esbuild in system paths, then import it
+        const require = createRequire(import.meta.url);
+        return (await import(require.resolve('esbuild'))).default;
+    }
+})();
 
 const production = process.env.NODE_ENV === 'production';
-const useWasm = os.arch() !== 'x64';
-const esbuild = (await import(useWasm ? 'esbuild-wasm' : 'esbuild')).default;
-
-const parser = (await import('argparse')).default.ArgumentParser();
-parser.add_argument('-r', '--rsync', { help: "rsync bundles to ssh target after build", metavar: "HOST" });
-parser.add_argument('-w', '--watch', { action: 'store_true', help: "Enable watch mode", default: process.env.ESBUILD_WATCH === "true" });
-parser.add_argument('-m', '--metafile', { help: "Enable bundle size information file", metavar: "FILE" });
-const args = parser.parse_args();
-
-if (args.rsync)
-    process.env.RSYNC = args.rsync;
-
 // List of directories to use when using import statements
 const nodePaths = ['pkg/lib'];
 const outdir = 'dist';
 
 // Obtain package name from package.json
 const packageJson = JSON.parse(fs.readFileSync('package.json'));
+
+const parser = (await import('argparse')).default.ArgumentParser();
+/* eslint-disable max-len */
+parser.add_argument('-r', '--rsync', { help: "rsync bundles to ssh target after build", metavar: "HOST" });
+parser.add_argument('-w', '--watch', { action: 'store_true', help: "Enable watch mode", default: process.env.ESBUILD_WATCH === "true" });
+/* eslint-enable max-len */
+const args = parser.parse_args();
+
+if (args.rsync)
+    process.env.RSYNC = args.rsync;
 
 function notifyEndPlugin() {
     return {
@@ -79,25 +96,28 @@ const context = await esbuild.context({
     ...!production ? { sourcemap: "linked" } : {},
     bundle: true,
     entryPoints: ['./src/index.js'],
-    external: ['*.woff', '*.woff2', '*.jpg', '*.svg', '../../assets*'], // Allow external font files which live in ../../static/fonts
-    legalComments: 'external', // Move all legal comments to a .LEGAL.txt file
-    loader: { ".js": "jsx" },
-    metafile: !!args.metafile,
+    // Allow external font files which live in ../../static/fonts
+    external: ['*.woff', '*.woff2', '*.jpg', '*.svg', '../../assets*'],
+    // Move all legal comments to a .LEGAL.txt file
+    legalComments: 'external',
+    loader: { ".js": "jsx", ".py": "text" },
     minify: production,
     nodePaths,
     outdir,
+    metafile: true,
     target: ['es2020'],
     plugins: [
         cleanPlugin(),
-
         // Esbuild will only copy assets that are explicitly imported and used in the code.
         // Copy the other files here.
         {
             name: 'copy-assets',
             setup(build) {
-                build.onEnd(() => {
-                    fs.copyFileSync('./src/manifest.json', './dist/manifest.json');
-                    fs.copyFileSync('./src/index.html', './dist/index.html');
+                build.onEnd((output, _outputFiles) => {
+                    if (output?.errors.length === 0) {
+                        fs.copyFileSync('./src/manifest.json', './dist/manifest.json');
+                        fs.copyFileSync('./src/index.html', './dist/index.html');
+                    }
                 });
             }
         },
@@ -117,8 +137,32 @@ const context = await esbuild.context({
 
 try {
     const result = await context.rebuild();
-    if (args.metafile) {
-        fs.writeFileSync(args.metafile, JSON.stringify(result.metafile));
+
+    // skip metafile and runtime module calculation in watch mode
+    if (!args.watch) {
+        fs.writeFileSync('metafile.json', JSON.stringify(result.metafile));
+
+        // Extract bundled npm packages for dependency tracking
+        const bundledPackages = new Set();
+        for (const inputPath of Object.keys(result.metafile.inputs)) {
+            // Match paths like node_modules/package-name/ or node_modules/@scope/package-name/
+            const match = inputPath.match(/^node_modules\/(@[^/]+\/[^/]+|[^/]+)\//);
+            if (match)
+                bundledPackages.add(match[1]);
+        }
+
+        // Look up versions from package-lock.json and output simple format
+        const packageLock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+        const deps = [];
+        for (const pkgName of Array.from(bundledPackages).sort()) {
+            const lockKey = `node_modules/${pkgName}`;
+            const pkgInfo = packageLock.packages?.[lockKey];
+            if (pkgInfo?.version)
+                deps.push(`${pkgName} ${pkgInfo.version}`);
+            else
+                console.error(`Warning: Could not find version for ${pkgName}`);
+        }
+        fs.writeFileSync('runtime-npm-modules.txt', deps.join('\n') + '\n');
     }
 } catch (e) {
     if (!args.watch)

@@ -49,7 +49,7 @@ export const TAOWizard: React.FunctionComponent = ({services}:WizardProps) => {
     });
 
     useEffect(()=>{
-        const taoCERunning = services.filter((svc)=> svc.state === "running" && svc.unit === "tao-ce.service").length;
+        const taoCERunning = (services || []).filter((svc)=> svc.state === "running" && svc.unit === "tao-ce.service").length;
 
         progress.start.state = (taoCERunning > 0) ? "success" : "pending";
         progress.start.details = "";
@@ -57,8 +57,8 @@ export const TAOWizard: React.FunctionComponent = ({services}:WizardProps) => {
     }, [services]);
 
     useEffect(()=>{
-        const runningCount = services.filter((svc)=> svc.state === "running" && svc.unit != "tao-ce.service").length;
-        const totalCount = services.filter((svc)=> svc.unit != "tao-ce.service").length;
+        const runningCount = (services || []).filter((svc)=> svc.state === "running" && svc.unit != "tao-ce.service").length;
+        const totalCount = (services || []).filter((svc)=> svc.unit != "tao-ce.service").length;
 
         progress.services.state = (runningCount === totalCount) ? "success" : "pending";
         progress.services.details = `${runningCount}/${totalCount} services started.`;

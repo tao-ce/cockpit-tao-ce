@@ -17,14 +17,16 @@
 /*.whl
 /bots
 /cockpit-*.tar.xz
-/cockpit-navigator.spec
+/cockpit-*.spec
 /dist/
 /package-lock.json
 /pkg/
 /node_modules/
 /tmp/
 /tools/
- 
+/runtime-npm-modules.txt
+/metafile.json
+
 # subdirs (/subdir/...)
 /packaging/arch/PKGBUILD
 /packaging/debian/changelog

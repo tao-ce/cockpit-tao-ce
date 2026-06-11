@@ -3,7 +3,7 @@ import { parse as yamlParse } from "yaml";
 
 import {TAOConfig} from './interface.TAOConfig';
 import { Table, Tr, Th, Td, Tbody } from '@patternfly/react-table';
-import { Button, ClipboardCopy, ClipboardCopyAction, ClipboardCopyButton, Flex } from '@patternfly/react-core';
+import { Button, ClipboardCopy, Split,  SplitItem } from '@patternfly/react-core';
 import { url_root } from 'cockpit/_internal/location-utils';
 import { PlayIcon } from '@patternfly/react-icons';
 import { BsCursor } from 'react-icons/bs';
@@ -21,7 +21,8 @@ const InfoLine: React.FunctionComponent = ({label,url}:any) => (
   <Tr>
     <Th>{label}</Th>
     <Td>
-      <Flex>
+      <Split>
+        <SplitItem>
         <Button
           href={url}
           component='a'
@@ -29,14 +30,18 @@ const InfoLine: React.FunctionComponent = ({label,url}:any) => (
           icon={<PlayIcon/>}
           variant='control'
           />
+        </SplitItem>
+        <SplitItem isFilled>
         <ClipboardCopy
+          width={'auto'}
           hoverTip='Copy'
           clickTip='Copied'
           isCode
           isReadOnly
           variant='inline'
         >{url}</ClipboardCopy>
-      </Flex>
+        </SplitItem>
+      </Split>
     </Td>
   </Tr>
 );
